@@ -52,3 +52,29 @@ class identity extends scala.annotation.StaticAnnotation {
     defn
   }
 }
+
+@compileTimeOnly("@populateDef not expanded")
+class helloWorld extends scala.annotation.StaticAnnotation {
+  inline def apply(defn: Defn.Def) = meta {
+    val q"..$mods def $name[..$tparams](...$paramss): $tpeopt = $expr" = defn
+    q"""..$mods def $name[..$tparams](...$paramss): $tpeopt = "hello world""""
+  }
+}
+
+@compileTimeOnly("@appendA not expanded")
+class appendA extends scala.annotation.StaticAnnotation {
+  inline def apply(defn: Defn.Def) = meta {
+    val q"..$mods def $name[..$tparams](...$paramss): $tpeopt = { ..$stats }" = defn
+    val newStats =  stats :+ q"letters += 'a'"
+    q"..$mods def $name[..$tparams](...$paramss): $tpeopt = { ..$newStats }"
+  }
+}
+@compileTimeOnly("@appendB not expanded")
+class appendB extends scala.annotation.StaticAnnotation {
+  inline def apply(defn: Defn.Def) = meta {
+    val q"..$mods def $name[..$tparams](...$paramss): $tpeopt = { ..$stats }" = defn
+    val newStats = stats :+ q"letters += 'b'"
+    q"..$mods def $name[..$tparams](...$paramss): $tpeopt = { ..$newStats }"
+  }
+}
+

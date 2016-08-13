@@ -1,6 +1,11 @@
 package org.scalameta.paradise
 package typechecker
 
+import scala.meta.Ctor.Ref.Name
+import scala.meta.Mod.Annot
+import scala.meta.{Ctor, Mod, Term}
+import scala.meta.prettyprinters.{Structure, Syntax}
+
 trait Expanders {
   self: AnalyzerPlugins =>
 
@@ -72,22 +77,32 @@ trait Expanders {
     }
 
     def expandNewAnnotationMacro(original: Tree, annotationSym: Symbol, annotationTree: Tree, expandees: List[Tree]): Option[List[Tree]] = {
-      def filterMods(mods: Seq[scala.meta.Mod]) =
-        mods.filter {
-          case scala.meta.Mod.Annot(body: scala.meta.Term) =>
-            false // TODO: Filter out only the current annotation
-          case _ =>
-            true
-        }
-
       def expand(): Option[Tree] = {
         try {
+          def filterMods(mods: Seq[Mod]) = {
+            def firstAnnot = mods.find {
+              case Annot(body: Term) =>
+                body match {
+                  // TODO: handle the case where there are 2 annotations, one placebo "@identity" and the other "@main.identity"
+                  // This would cause the placebo to be removed and the latter would expand twice,
+                  // we need to verify we are removing the correct annotation including the package
+                  case Ctor.Ref.Name(name) => annotationSym.nameString == name
+                  case Ctor.Ref.Select(_, Ctor.Ref.Name(name)) => annotationSym.nameString == name
+                  case Term.Apply(Ctor.Ref.Name(name), Nil) => annotationSym.nameString == name
+                  case Term.Apply(Ctor.Ref.Select(_, Ctor.Ref.Name(name)), Nil) => annotationSym.nameString == name
+                  case _ => abort("Annotation name case not handled")
+                }
+              case _ => false
+            }
+
+            mods diff firstAnnot.toSeq
+          }
           val treeInfo.Applied(Select(New(_), nme.CONSTRUCTOR), targs, vargss) = annotationTree
           val metaTargs = targs.map(_.toMtree[m.Type])
           val metaVargss = vargss.map(_.map(_.toMtree[m.Term]))
           val metaExpandees = {
             expandees.map { expandee =>
-              expandee.toMtree[m.Stat].transform {
+              expandee.toMtree[m.Stat] match {
                 // TODO: detect and remove just annotteeTree
                 case defn: scala.meta.Decl.Val => defn.copy(mods = filterMods(defn.mods))
                 case defn: scala.meta.Decl.Var => defn.copy(mods = filterMods(defn.mods))
