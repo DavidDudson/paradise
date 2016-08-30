@@ -1,8 +1,13 @@
 import main._
-import org.scalatest.FunSuite
+import org.scalatest.{FunSuite, Matchers}
 
 // TODO: DavidDudson: simplify with argument macros
-class ExpansionTests extends FunSuite {
+class ExpansionTests extends FunSuite with Matchers {
+
+  test("compilation") {
+    "@identity def hi() = 1" should compile
+    "@helloWorld def hi() = 1" should compile
+  }
 
   test("Nested macro should expand with identity") {
     @identity

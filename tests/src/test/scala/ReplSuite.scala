@@ -1,7 +1,9 @@
+import org.scalactic.source.Position
 import org.scalatest._
+
 import scala.compat.Platform.EOL
 import scala.tools.nsc.interpreter._
-import scala.tools.nsc.{Settings, MainGenericRunner}
+import scala.tools.nsc.{MainGenericRunner, Settings}
 
 trait ReplSuite extends ToolSuite {
   private def replViaILoop(code: String): String = {
@@ -64,7 +66,8 @@ trait ReplSuite extends ToolSuite {
   private var _repl: String => String = null
   final protected def repl(code: String): String = _repl(code)
 
-  override protected def test(testName: String, testTags: Tag*)(testFun: => Unit): Unit = {
+
+  override protected def test(testName: String, testTags: Tag*)(testFun: => Any)(implicit pos: Position): Unit = {
     super.test(testName + " (ILoop)", testTags: _*)({ this._repl = replViaILoop _; testFun })
     super.test(testName + " (ReplGlobal)", testTags: _*)({ this._repl = replViaReplGlobal _; testFun })
   }
